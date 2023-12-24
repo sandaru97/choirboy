@@ -3,13 +3,13 @@ import numpy as np
 import time
 
 # Define the harmonies (intervals) in semitones from the original voice
-harmony_intervals = [4, 7,0]  # You can modify this list for different harmonies
+harmony_intervals = [1,6,11]  # You can modify this list for different harmonies
 
 # Parameters for the audio processing
-CHUNK = 512  # Number of frames per buffer
+CHUNK =1024  # Number of frames per buffer
 FORMAT = pyaudio.paFloat32
-CHANNELS = 2
-RATE = 44100  # Sample rate
+CHANNELS = 1
+RATE = 192000  # Sample rate
 
 # Function to generate the harmonized audio signal
 def generate_harmony(frames, original_signal):
