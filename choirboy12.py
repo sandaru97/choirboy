@@ -41,8 +41,8 @@ def get_valid_num_voices():
 pitch_offset = get_valid_pitch_offset()
 num_voices = get_valid_num_voices()
 
-max_time_shift = 0.02  # 20 milliseconds
-max_pitch_variation = 0.5  # Adjust based on your preference
+max_time_shift = 0.05  # 20 milliseconds
+max_pitch_variation = 1  # Adjust based on your preference
 
 pitch_shifts = generate_pitch_array(num_voices, pitch_offset)
 time_shifts = generate_time_shifts(num_voices, max_time_shift)
@@ -86,5 +86,5 @@ def apply_choir_effect_live_wav(input_file, pitch_shifts, time_shifts, pitch_var
         time.sleep(len(audio_data_float) / sample_rate)
 
 # Example usage:
-input_file_wav = "choirboyaudio0.wav"
+input_file_wav = "choirboyaudio.wav"
 apply_choir_effect_live_wav(input_file_wav, pitch_shifts, time_shifts, pitch_variations)
