@@ -2,6 +2,7 @@ import sounddevice as sd
 import numpy as np
 from scipy.io import wavfile
 import time
+import math
 
 def generate_pitch_array(num_voices, pitch_offset):
     pitch_array = []
@@ -37,9 +38,27 @@ def get_valid_num_voices():
         else:
             print("Invalid number of voices. Please enter a value between 1 and 12.")
 
-# Ask user for pitch offset and number of voices
+def get_valid_compression_amount():
+    while True:
+        compression_amount = float(input("Enter the compression amount (0.1 to 10.0): "))
+        if 0.1 <= compression_amount <= 10.0:
+            return compression_amount
+        else:
+            print("Invalid compression amount. Please enter a value between 0.1 and 10.0.")
+
+def get_valid_reverb_amount():
+    while True:
+        reverb_amount = float(input("Enter the reverb amount (0.0 to 1.0): "))
+        if 0.0 <= reverb_amount <= 1.0:
+            return reverb_amount
+        else:
+            print("Invalid reverb amount. Please enter a value between 0.0 and 1.0.")
+
+# Ask user for pitch offset, number of voices, compression amount, and reverb amount
 pitch_offset = get_valid_pitch_offset()
 num_voices = get_valid_num_voices()
+compression_amount = get_valid_compression_amount()
+reverb_amount = get_valid_reverb_amount()
 
 max_time_shift = 0.05  # 20 milliseconds
 max_pitch_variation = 1  # Adjust based on your preference
@@ -48,7 +67,18 @@ pitch_shifts = generate_pitch_array(num_voices, pitch_offset)
 time_shifts = generate_time_shifts(num_voices, max_time_shift)
 pitch_variations = generate_pitch_variations(num_voices, max_pitch_variation)
 
-def apply_choir_effect_live_wav(input_file, pitch_shifts, time_shifts, pitch_variations):
+# Load impulse response for reverb
+try:
+    impulse_response, _ = wavfile.read("impulse_response.wav")
+    impulse_response = impulse_response[:, 0]  # Select only the first channel if multichannel
+
+    # Ensure impulse response array is one-dimensional
+    impulse_response = impulse_response.astype(np.float32)
+except Exception as e:
+    print("Error loading impulse response:", e)
+    impulse_response = None
+
+def apply_choir_effect_live_wav(input_file, pitch_shifts, time_shifts, pitch_variations, compression_amount, reverb_amount):
     sample_rate, audio_data_int = wavfile.read(input_file)
     audio_data_float = audio_data_int.astype(np.float32) / 32767.0  # Convert to float and normalize
 
@@ -69,6 +99,14 @@ def apply_choir_effect_live_wav(input_file, pitch_shifts, time_shifts, pitch_var
 
             mixed_audio_data += shifted_audio / len(pitch_shifts)
 
+        # Apply compression with a logarithmic function
+        mixed_audio_data = np.sign(mixed_audio_data) * (np.log(1 + compression_amount * np.abs(mixed_audio_data)) / np.log(1 + compression_amount))
+
+        # Apply reverb
+        if impulse_response is not None and reverb_amount > 0:
+            reverb_data = np.convolve(mixed_audio_data, impulse_response, mode='same')
+            mixed_audio_data = (1 - reverb_amount) * mixed_audio_data + reverb_amount * reverb_data
+
         # Normalize mixed audio data
         mixed_audio_data /= np.max(np.abs(mixed_audio_data)) / 0.9
         mixed_audio_data = np.clip(mixed_audio_data, -1.0, 1.0)
@@ -87,4 +125,4 @@ def apply_choir_effect_live_wav(input_file, pitch_shifts, time_shifts, pitch_var
 
 # Example usage:
 input_file_wav = "choirboyaudio.wav"
-apply_choir_effect_live_wav(input_file_wav, pitch_shifts, time_shifts, pitch_variations)
+apply_choir_effect_live_wav(input_file_wav, pitch_shifts, time_shifts, pitch_variations, compression_amount, reverb_amount)
