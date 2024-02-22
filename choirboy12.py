@@ -69,7 +69,7 @@ pitch_variations = generate_pitch_variations(num_voices, max_pitch_variation)
 
 # Load impulse response for reverb
 try:
-    impulse_response, _ = wavfile.read("impulse_response.wav")
+    _, impulse_response = wavfile.read("impulse_response.wav")  # Change the order of return values
     impulse_response = impulse_response[:, 0]  # Select only the first channel if multichannel
 
     # Ensure impulse response array is one-dimensional
