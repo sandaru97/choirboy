@@ -2,7 +2,6 @@ import sounddevice as sd
 import numpy as np
 from scipy.io import wavfile
 import time
-import math
 
 def generate_pitch_array(num_voices, pitch_offset):
     pitch_array = []
@@ -15,12 +14,6 @@ def generate_pitch_array(num_voices, pitch_offset):
         pitch_array.append(start + i * pitch_offset)
 
     return pitch_array
-
-def generate_time_shifts(num_voices, max_time_shift):
-    return [np.random.uniform(-max_time_shift, max_time_shift) for _ in range(num_voices)]
-
-def generate_pitch_variations(num_voices, max_pitch_variation):
-    return [np.random.uniform(-max_pitch_variation, max_pitch_variation) for _ in range(num_voices)]
 
 def get_valid_pitch_offset():
     while True:
@@ -38,91 +31,39 @@ def get_valid_num_voices():
         else:
             print("Invalid number of voices. Please enter a value between 1 and 12.")
 
-def get_valid_compression_amount():
-    while True:
-        compression_amount = float(input("Enter the compression amount (0.1 to 10.0): "))
-        if 0.1 <= compression_amount <= 10.0:
-            return compression_amount
-        else:
-            print("Invalid compression amount. Please enter a value between 0.1 and 10.0.")
-
-def get_valid_reverb_amount():
-    while True:
-        reverb_amount = float(input("Enter the reverb amount (0.0 to 1.0): "))
-        if 0.0 <= reverb_amount <= 1.0:
-            return reverb_amount
-        else:
-            print("Invalid reverb amount. Please enter a value between 0.0 and 1.0.")
-
-# Ask user for pitch offset, number of voices, compression amount, and reverb amount
-pitch_offset = get_valid_pitch_offset()
-num_voices = get_valid_num_voices()
-compression_amount = get_valid_compression_amount()
-reverb_amount = get_valid_reverb_amount()
-
-max_time_shift = 0.05  # 20 milliseconds
-max_pitch_variation = 1  # Adjust based on your preference
-
-pitch_shifts = generate_pitch_array(num_voices, pitch_offset)
-time_shifts = generate_time_shifts(num_voices, max_time_shift)
-pitch_variations = generate_pitch_variations(num_voices, max_pitch_variation)
-
-# Load impulse response for reverb
-try:
-    _, impulse_response = wavfile.read("impulse_response.wav")  # Change the order of return values
-    impulse_response = impulse_response[:, 0]  # Select only the first channel if multichannel
-
-    # Ensure impulse response array is one-dimensional
-    impulse_response = impulse_response.astype(np.float32)
-except Exception as e:
-    print("Error loading impulse response:", e)
-    impulse_response = None
-
-def apply_choir_effect_live_wav(input_file, pitch_shifts, time_shifts, pitch_variations, compression_amount, reverb_amount):
+def apply_choir_effect_live_stereo(input_file, pitch_offset, num_voices):
     sample_rate, audio_data_int = wavfile.read(input_file)
     audio_data_float = audio_data_int.astype(np.float32) / 32767.0  # Convert to float and normalize
 
+    pitch_shifts = generate_pitch_array(num_voices, pitch_offset)
+
     while True:
-        mixed_audio_data = np.zeros_like(audio_data_float)
+        mixed_audio_data = np.zeros((len(audio_data_float), 2), dtype=np.float32)
 
-        for shift, time_shift, pitch_variation in zip(pitch_shifts, time_shifts, pitch_variations):
+        for i, pitch_shift in enumerate(pitch_shifts):
             # Apply pitch shift
-            shifted_audio = np.roll(audio_data_float, int(shift * len(audio_data_float) / 1200))
+            shifted_audio = np.roll(audio_data_float, int(pitch_shift * len(audio_data_float) / 1200), axis=0)
 
-            # Apply pitch variation
-            pitch_variation_samples = int(pitch_variation * sample_rate)
-            shifted_audio = np.roll(shifted_audio, pitch_variation_samples)
+            # Take only the first column of shifted_audio (for stereo)
+            shifted_audio = shifted_audio[:, 0]
 
-            # Apply time shift
-            time_shift_samples = int(time_shift * sample_rate)
-            shifted_audio = np.roll(shifted_audio, time_shift_samples)
-
-            mixed_audio_data += shifted_audio / len(pitch_shifts)
-
-        # Apply compression with a logarithmic function
-        mixed_audio_data = np.sign(mixed_audio_data) * (np.log(1 + compression_amount * np.abs(mixed_audio_data)) / np.log(1 + compression_amount))
-
-        # Apply reverb
-        if impulse_response is not None and reverb_amount > 0:
-            reverb_data = np.convolve(mixed_audio_data, impulse_response, mode='same')
-            mixed_audio_data = (1 - reverb_amount) * mixed_audio_data + reverb_amount * reverb_data
+            # Distribute voices evenly between left and right channels
+            if i % 2 == 0:
+                mixed_audio_data[:, 0] += shifted_audio / (num_voices // 2)
+            else:
+                mixed_audio_data[:, 1] += shifted_audio / (num_voices // 2)
 
         # Normalize mixed audio data
         mixed_audio_data /= np.max(np.abs(mixed_audio_data)) / 0.9
         mixed_audio_data = np.clip(mixed_audio_data, -1.0, 1.0)
 
-        # Add breath sounds
-        breath_chance = 0.02  # 2% chance of breath sound
-        if np.random.rand() < breath_chance:
-            breath_length = len(mixed_audio_data)
-            breath_sound = np.random.normal(0, 0.01, breath_length)
-            mixed_audio_data += breath_sound.reshape(-1, 1)
-
-        sd.play(mixed_audio_data, sample_rate)
-        sd.wait()
+        sd.play(mixed_audio_data, sample_rate, blocking=True)
 
         time.sleep(len(audio_data_float) / sample_rate)
 
 # Example usage:
-input_file_wav = "choirboyaudio.wav"
-apply_choir_effect_live_wav(input_file_wav, pitch_shifts, time_shifts, pitch_variations, compression_amount, reverb_amount)
+pitch_offset = get_valid_pitch_offset()
+num_voices = get_valid_num_voices()
+
+input_file_wav = "choirboyaudio0.wav"
+apply_choir_effect_live_stereo(input_file_wav, pitch_offset, num_voices)
