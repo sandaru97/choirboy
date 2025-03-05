@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Tappy Tempo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /*min-height: 100vh;*/
+      background-color: #ffefc3;
+      margin: auto;
+      /*IPHONE SE */
+      width: 375px;  /*  A reasonable base width - adjust if needed (see scaling below) */
+    height: 667px; /* iPhone SE height based on width and aspect ratio */
+    /*aspect-ratio: 360 / 640;  /* Explicit aspect ratio */
+    /* aspect-ratio: 0.5625; Alternate aspect ratio */
+    position: absolute; /* or absolute - important for centering */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center the container */
+    overflow: hidden;  /* Clip any content that overflows */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Optional shadow */
+    }
+
+    .container {
+      text-align: center;
+      max-width: 500px;
+      width: 100%;
+      position: relative;
+    }
+
+    .bpm-title p {
+      font-size: 40px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .circle {
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      background-color: #FF6F61;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .circle img {
+      width: 95%;
+      height: 95%;
+      object-fit: scale-down;
+      transition: opacity 0.5s ease; /* Smooth image transition */
+    }
+
+    .average-bpm p {
+      font-size: 18px;
+      margin-top: 10px;
+      color: #333;
+    }
+
+    /* Style for the new horizontal slider */
+    .slider-container {
+      width: 80%; /* Adjust width as needed */
+      margin: 20px auto; /* This centers the slider container */
+    }
+
+    .slider {
+      width: 100%;
+      height: 15px;
+      background-color: #ddd;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .slider input {
+      width: 100%;
+      appearance: none;
+      height: 20px;
+      background-color: transparent;
+      outline: none;
+      border-radius: 8px;
+    }
+
+    .slider input::-webkit-slider-thumb {
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      background-color: #FF6F61;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .slider input::-moz-range-thumb {
+      width: 25px;
+      height: 25px;
+      background-color: #FF6F61;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .buttons-container {
+      margin-top: 30px;
+    }
+
+    .circle-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: #FF6F61;
+      color: #333;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px;
+      transition: background-color 0.3s;
+    }
+
+    .circle-btn:hover {
+      background-color: #FF9B9B;
+    }
+
+    .clouds {
+      position: absolute;
+      width: 100%;
+      height: 100px; /* Adjust height as needed */
+      background-repeat: no-repeat;
+      background-size: cover;
+      z-index: -1;
+
+    }
+
+    .top {
+      top: 0;
+      background-image: url('cloudbottom.png'); /* Replace with your cloud image URL */
+    }
+
+    .bottom {
+      bottom: 0;
+      background-image: url('cloudtop.png'); /* Replace with your cloud image URL */
+    }
+     /* Help popup styles */
+     .help-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none; /* Initially hidden */
+      justify-content: center;
+      align-items: center;
+      z-index: 9999; /* Ensure it is on top of other elements */
+    }
+
+    .help-popup {
+      background-color: beige;
+      padding: 20px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .help-popup h2 {
+      margin-bottom: 15px;
+    }
+
+    .help-popup p {
+      margin-bottom: 20px;
+    }
+
+    .help-popup button {
+      background-color: #FF6F61;
+      border: none;
+      padding: 10px 20px;
+      color: white;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .help-popup button:hover {
+      background-color: #FF6F61;
+    }
+    .circle-btn.active {
+  background-color: #FF6F61; /* Lighten the color to show it's active */
+}
+.beta-container {
+  position: absolute;  /* This will position the image relative to the entire page */
+  top: 0;
+  left: 0;
+  z-index: 10;  /* Ensures the image is above all other content */
+}
+
+.beta-img {
+  width: 80px;  /* Adjust the size of the image as needed */
+  height: auto;  /* Keep the image's aspect ratio intact */
+}
+  </style>
+</head>
+<body>
+  <div class="beta-container">
+    <img src="beta.png" alt="Beta" class="beta-img">
+  </div>
+  <div class="clouds top"></div>
+
+  <div class="container">
+    <div class="bpm-title">
+      <p id="bpmDisplay">BPM: <span id="bpmValue">100</span></p>
+    </div>
+
+    <div class="circle" id="bpmButton">
+      <!-- Image will change based on BPM -->
+      <img id="poseImage" src="Pose1Final.png" alt="Pose Image">
+    </div>
+
+    <div class="slider-container">
+      <div class="slider">
+        <input type="range" id="bpmSlider" min="40" max="300" value="100" step="1">
+      </div>
+    </div>
+
+    <div>
+      <p>Stay bold, make your sound heard.
+      </p><p>&copy; 2025 $AM OFFICIAL
+      </p>
+
+    </div>
+
+    <div class="buttons-container" id="metronomeButton">
+      <button class="circle-btn" id="startBtn" id="metronomeButton">
+        <img src="metronome1.png" width="50px" height="50px">
+      </button>
+      
+      <button class="circle-btn" id="helpBtn">
+        <img src="help1.png" width="50px" height="50px">
+      </button>
+    </div>
+    <audio id="tapSound" src="beep.mp3" preload="auto"></audio>
+    <audio id="metronomeSound" src="metronome.mp3" preload="auto"></audio>
+
+  </div>
+ <!-- Help Popup -->
+ <div class="help-popup-overlay" id="helpPopupOverlay">
+  <div class="help-popup">
+    <h2 style="border-bottom:2px dashed #FF6F61;padding-bottom: 3px;;">Help</h2>
+    <p>Tap the plush or use slider to set tempo (BPM)</p>
+    <p>Click metrobnome icon to start or stop metronome</p>
+    <button id="closeHelpBtn">Close</button>
+  </div>
+</div>
+</div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const helpBtn = document.getElementById("helpBtn");
+      const closeHelpBtn = document.getElementById("closeHelpBtn");
+      const helpPopupOverlay = document.getElementById("helpPopupOverlay");
+
+      // Show help popup when help button is clicked
+      helpBtn?.addEventListener("click", () => {
+        helpPopupOverlay.style.display = "flex";  // Show the popup
+      });
+
+      // Close the help popup when close button is clicked
+      closeHelpBtn?.addEventListener("click", () => {
+        helpPopupOverlay.style.display = "none";  // Hide the popup
+      });
+    });
+  </script>
+<div id="visualMetronome" class="visual-metronome"></div>
+  <div class="clouds bottom"></div>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let taps = [];
+      let totalBpm = 0;
+      let bpmCount = 0;
+      let metronomeInterval;
+      const bpmButton = document.getElementById('bpmButton');
+      const bpmDisplay = document.getElementById('bpmDisplay');
+      const averageBpmDisplay = document.getElementById('averageBpmDisplay');
+      const metronomeButton = document.getElementById('metronomeButton');
+      const resetButton = document.getElementById('resetButton');
+      const tapSound = document.getElementById('tapSound');
+      const metronomeSound = document.getElementById('metronomeSound');
+      const visualMetronome = document.getElementById('visualMetronome');
+      const bpmSlider = document.getElementById('bpmSlider');
+      const sliderValue = document.getElementById('sliderValue');
+
+      bpmSlider.addEventListener('input', () => {
+        const bpm = bpmSlider.value;
+        sliderValue.textContent = `Current BPM: ${bpm}`;
+        bpmDisplay.textContent = `BPM: ${bpm}`;
+        
+        // Update the metronome interval if it's running
+        if (metronomeInterval) {
+          const intervalTime = 60000 / bpm;
+          clearInterval(metronomeInterval);
+          metronomeInterval = setInterval(() => {
+            metronomeSound.play().catch(error => {
+              console.error("Error playing metronome sound: ", error);
+            });
+
+            // Flash the visual metronome indicator
+            visualMetronome.classList.add('flashing');
+            setTimeout(() => {
+
+              visualMetronome.classList.remove('flashing');
+            }, 100); // Flash duration in milliseconds
+
+          }, intervalTime);
+
+        }
+      });
+
+      bpmButton.addEventListener('click', () => {
+        switchImage()
+        const currentTime = Date.now();
+        
+        // Play sound feedback on tap
+        
+        tapSound.play().catch(error => {
+          console.error("Error playing sound: ", error);
+        });
+
+        // Record the time of the tap
+        taps.push(currentTime);
+
+        if (taps.length > 1) {
+          // Calculate the time difference between the last two taps
+          const timeDifference = (currentTime - taps[taps.length - 2]) / 1000; // in seconds
+          const bpm = Math.round(60 / timeDifference); // BPM = 60 / time between taps in seconds
+
+          // Display the current BPM
+          bpmDisplay.textContent = `BPM: ${bpm}`;
+
+          // Update total BPM and increment count for average calculation
+          totalBpm += bpm;
+          bpmCount++;
+
+          // Calculate and display the average BPM
+          const averageBpm = Math.round(totalBpm / bpmCount);
+          averageBpmDisplay.textContent = `Average BPM: ${averageBpm}`;
+          
+          // Update the slider to match the new BPM
+          bpmSlider.value = bpm;
+          sliderValue.textContent = `Current BPM: ${bpm}`;
+        }
+      });
+
+      // Metronome functionality
+      metronomeButton.addEventListener('click', () => {
+        if (metronomeInterval) {
+          // Stop the metronome if it's already running
+          clearInterval(metronomeInterval);
+          //metronomeButton.textContent = "Start Metronome";
+          metronomeInterval = null;
+        } else {
+          // Start the metronome if it's not running
+          const bpm = parseInt(bpmDisplay.textContent.replace("BPM: ", "")); 
+          if (bpm === 0) {
+            alert("Please tap to set a BPM first.");
+            return;
+          }
+
+          // Calculate the interval time between beats in milliseconds
+          const intervalTime = 60000 / bpm;
+          
+          // Start the metronome
+          metronomeInterval = setInterval(() => {
+            switchImage();  // Add this line to switch the image on each beep
+
+            metronomeSound.play().catch(error => {
+              console.error("Error playing metronome sound: ", error);
+            });
+
+            // Flash the visual metronome indicator
+            visualMetronome.classList.add('flashing');
+            setTimeout(() => {
+              visualMetronome.classList.remove('flashing');
+            }, 100); // Flash duration in milliseconds
+          }, intervalTime);
+
+         // metronomeButton.textContent = "Stop Metronome";
+        }
+      });
+
+      // Reset functionality
+      resetButton.addEventListener('click', () => {
+        // Clear stored taps
+        taps = [];
+        totalBpm = 0;
+        bpmCount = 0;
+
+        // Reset BPM and average BPM displays
+        bpmDisplay.textContent = "BPM: 0";
+        averageBpmDisplay.textContent = "Average BPM: 0";
+
+        // Reset slider
+        bpmSlider.value = 120;
+        sliderValue.textContent = "Current BPM: 120";
+
+        // Stop the metronome if it's running
+        if (metronomeInterval) {
+          clearInterval(metronomeInterval);
+          metronomeButton.textContent = "Start Metronome";
+          metronomeInterval = null;
+        }
+
+        // Reset visual metronome
+        visualMetronome.classList.remove('flashing');
+      });
+    });
+    
+  </script>
+  <script>metronomeButton.addEventListener('click', () => {
+    if (metronomeInterval) {
+      // Stop the metronome if it's already running
+      clearInterval(metronomeInterval);
+      metronomeInterval = null;
+      
+      // Remove the active class when the metronome is stopped
+      metronomeButton.classList.remove('active');
+    } else {
+      // Start the metronome if it's not running
+      const bpm = parseInt(bpmDisplay.textContent.replace("BPM: ", ""));
+      if (bpm === 0) {
+        alert("Please tap to set a BPM first.");
+        return;
+      }
+  
+      // Calculate the interval time between beats in milliseconds
+      const intervalTime = 60000 / bpm;
+      
+      // Start the metronome
+      metronomeInterval = setInterval(() => {
+        metronomeSound.play().catch(error => {
+          console.error("Error playing metronome sound: ", error);
+        });
+  
+        // Flash the visual metronome indicator
+        visualMetronome.classList.add('flashing');
+        setTimeout(() => {
+          visualMetronome.classList.remove('flashing');
+        }, 100); // Flash duration in milliseconds
+      }, intervalTime);
+  
+      // Add the active class when the metronome is started
+      metronomeButton.classList.add('active');
+    }
+  });
+  </script>
+  <script>
+    function switchImage() {
+        // Get the image element
+        var imgElement = document.getElementById("poseImage");
+
+        // Check the current image source and alternate it
+        if (imgElement.src.endsWith("Pose2Final.png")) {
+            imgElement.src = "Pose1Final.png";
+        } else {
+            imgElement.src = "Pose2Final.png";
+        }
+    }
+</script>
+<script>document.addEventListener('DOMContentLoaded', () => {
+  const helpBtn = document.getElementById("helpBtn");
+  const metronomeButton = document.getElementById("metronomeButton");
+  const metronomeSound = document.getElementById("metronomeSound");
+  const visualMetronome = document.getElementById("visualMetronome");
+  const bpmSlider = document.getElementById('bpmSlider');
+  const sliderValue = document.getElementById('sliderValue');
+  const bpmDisplay = document.getElementById('bpmDisplay');
+  const tapSound = document.getElementById('tapSound');
+  const helpPopupOverlay = document.getElementById("helpPopupOverlay");
+  const closeHelpBtn = document.getElementById("closeHelpBtn");
+  
+  let metronomeInterval;
+
+  // Show help popup when help button is clicked
+  helpBtn?.addEventListener("click", () => {
+    helpPopupOverlay.style.display = "flex";  // Show the popup
+    helpBtn.classList.add('active');  // Mark the button as active
+    helpBtn.querySelector('img').src = 'help.png';  // Change image to active one
+  });
+
+  // Close the help popup when close button is clicked
+  closeHelpBtn?.addEventListener("click", () => {
+    helpPopupOverlay.style.display = "none";  // Hide the popup
+    helpBtn.classList.remove('active');  // Remove active class
+    helpBtn.querySelector('img').src = 'help1.png';  // Change image back to inactive
+  });
+
+  metronomeButton.addEventListener('click', () => {
+    if (metronomeInterval) {
+      // Stop the metronome if it's already running
+      clearInterval(metronomeInterval);
+      metronomeInterval = null;
+
+      // Remove the active class and change the image back
+      metronomeButton.classList.remove('active');
+      metronomeButton.querySelector('img').src = 'metronome1.png';
+    } else {
+      // Start the metronome if it's not running
+      const bpm = parseInt(bpmDisplay.textContent.replace("BPM: ", ""));
+      if (bpm === 0) {
+        alert("Please tap to set a BPM first.");
+        return;
+      }
+
+      // Calculate the interval time between beats in milliseconds
+      const intervalTime = 60000 / bpm;
+      
+      // Start the metronome
+      metronomeInterval = setInterval(() => {
+        metronomeSound.play().catch(error => {
+          console.error("Error playing metronome sound: ", error);
+        });
+
+        // Flash the visual metronome indicator
+        visualMetronome.classList.add('flashing');
+        setTimeout(() => {
+          visualMetronome.classList.remove('flashing');
+        }, 100); // Flash duration in milliseconds
+      }, intervalTime);
+
+      // Add the active class and change the image to active one
+      metronomeButton.classList.add('active');
+      metronomeButton.querySelector('img').src = 'metronome.png';  // Change image to active one
+    }
+  });
+});
+</script>
+
+</body>
+</html>
