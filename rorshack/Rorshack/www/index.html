@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mirrored Drawing App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* CSS - Mirrored Drawing */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, rgba(180, 230, 255, 0.8), rgba(255, 255, 255, 0.8));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 80vmin; /* Make it a square based on the smaller dimension */
+            height: 80vmin;
+            background-color: white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .tools {
+            position: fixed;
+            display: flex;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            padding: 10px 20px;
+            gap: 15px;
+            bottom: 20px;
+        }
+
+        .top-bar {
+            position: fixed;
+            display: flex;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            padding: 10px 20px;
+            gap: 15px;
+            top: 20px; /* Position at the top */
+        }
+
+        .tools button,
+        .tools div,
+        .top-bar button,
+        .top-bar div {
+            background-color: #f3f3f3;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 40px;
+            height: 40px;
+        }
+
+        .tools svg,
+        .tools i,
+        .top-bar svg,
+        .top-bar i {
+            font-size: 1.3rem;
+        }
+
+        #color-picker-button {
+            /* Icon will be placed here */
+        }
+
+        #color-picker-button:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.5), rgba(255, 0, 255, 0.5));
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #brush-size-container {
+            position: relative;
+        }
+
+        #brush-size-container:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 0, 0.5), rgba(0, 255, 0, 0.5));
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #eraserTool:hover {
+            background: linear-gradient(135deg, rgba(25, 25, 25, 0.5), rgba(55, 55, 55, 0.5));
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #undoButton:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 0, 0.5));
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #clearCanvas:hover {
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.5), rgba(255, 255, 0, 0.5));
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #exportButton:hover,
+        #helpButton:hover,
+        #bgColorButton:hover {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.5), rgba(255, 100, 0, 0.5));
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #brush-slider-container {
+            display: none;
+            position: absolute;
+            top: -90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            width: 200px;
+        }
+
+        #brush-slider-container input {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        #brush-size-preview {
+            font-size: 0.9rem;
+            margin-top: 5px;
+            color: white;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .footer {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container">
+        <canvas id="paintCanvas"></canvas>
+    </div>
+    <div class="top-bar">
+        <button id="exportButton"><i class="fas fa-file-export"></i></button>
+        <button id="helpButton"><i class="fas fa-question-circle"></i></button>
+        <button id="bgColorButton"><i class="fas fa-fill-drip"></i></button>
+    </div>
+    <div class="tools">
+        <button id="color-picker-button" style="background-color: #000;"><i class="fas fa-palette"></i></button>
+        <div id="brush-size-container">
+            <i class="fas fa-paint-brush"></i>
+            <div id="brush-slider-container">
+                <input type="range" min="1" max="50" value="5" id="brushSizeSlider">
+                <div id="brush-size-preview">5px</div>
+            </div>
+        </div>
+        <button id="eraserTool"><i class="fas fa-eraser"></i></button>
+        <button id="undoButton"><i class="fas fa-undo"></i></button>
+        <button id="clearCanvas"><i class="fas fa-trash"></i></button>
+    </div>
+    <script>
+        // JavaScript - Mirrored Drawing
+        let canvas = document.getElementById('paintCanvas');
+        let ctx = canvas.getContext('2d');
+        let painting = false;
+        let brushSize = 5;
+        let brushColor = '#000000';
+        let isMirroring = true; // Enable mirroring by default
+        let history = [];
+        let historyIndex = -1;
+        let eraserMode = false;
+        let currentBackgroundColor = '#ffffff'; // Default canvas background color
+
+        // Function to draw text
+        function drawInstructionText() {
+            ctx.fillStyle = '#888'; // Grey color for the text
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // Position the text on the left half of the canvas
+            ctx.fillText('Draw here 🠗', canvas.width / 4, canvas.height / 2);
+        }
+
+        // Set canvas to be a square
+        function resizeCanvas() {
+            const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
+            canvas.width = size;
+            canvas.height = size;
+            restoreCanvasState(); // Restore state after resize to prevent clearing
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawDividingLine() {
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+        }
+
+        function startPosition(e) {
+            painting = true;
+            draw(e);
+            // Clear the instruction text when drawing starts
+            if (historyIndex === -1 && history.length === 0) { // Only clear if it's the very first stroke
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = currentBackgroundColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                drawDividingLine();
+            }
+        }
+
+        function endPosition() {
+            painting = false;
+            ctx.beginPath();
+            saveHistory(); // Save history after each stroke ends
+        }
+
+        document.getElementById('eraserTool').addEventListener('click', () => {
+            eraserMode = !eraserMode;
+            document.getElementById('eraserTool').style.backgroundColor = eraserMode ? '#ffcc00' : '';
+        });
+
+        function saveHistory() {
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+            history.push(canvas.toDataURL());
+            historyIndex++;
+        }
+
+        function restoreCanvasState() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = currentBackgroundColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (historyIndex >= 0) {
+                let img = new Image();
+                img.src = history[historyIndex];
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    drawDividingLine();
+                };
+            } else {
+                drawDividingLine();
+                drawInstructionText();
+            }
+        }
+
+        document.getElementById('undoButton').addEventListener('click', () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreCanvasState();
+            } else if (historyIndex === 0) {
+                history = [];
+                historyIndex = -1;
+                restoreCanvasState(); // Will redraw instruction text
+            }
+        });
+
+        function draw(e) {
+            if (!painting) return;
+
+            let x, y;
+            const rect = canvas.getBoundingClientRect();
+
+            if (e.touches) {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+
+            ctx.lineWidth = brushSize;
+            ctx.lineCap = 'round';
+
+            // Draw on the left side
+            if (x < canvas.width / 2) {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x, y); // Single point for initial dot
+                ctx.strokeStyle = eraserMode ? currentBackgroundColor : brushColor;
+                ctx.globalCompositeOperation = eraserMode ? 'destination-out' : 'source-over';
+                ctx.stroke();
+
+                // Mirror on the right side
+                if (isMirroring) {
+                    const mirroredX = canvas.width - x;
+                    ctx.beginPath();
+                    ctx.moveTo(mirroredX, y);
+                    ctx.lineTo(mirroredX, y); // Single point for initial dot
+                    ctx.strokeStyle = eraserMode ? currentBackgroundColor : brushColor;
+                    ctx.globalCompositeOperation = eraserMode ? 'destination-out' : 'source-over';
+                    ctx.stroke();
+                }
+            }
+        }
+
+        canvas.addEventListener('mousedown', startPosition);
+        canvas.addEventListener('mouseup', endPosition);
+        canvas.addEventListener('mousemove', (e) => {
+            if (painting) draw(e);
+        });
+
+        canvas.addEventListener('touchstart', startPosition);
+        canvas.addEventListener('touchend', endPosition);
+        canvas.addEventListener('touchmove', (e) => {
+            if (painting) draw(e);
+        });
+
+        document.getElementById('clearCanvas').addEventListener('click', () => {
+            history = [];
+            historyIndex = -1;
+            restoreCanvasState();
+        });
+
+        const brushSizeContainer = document.getElementById('brush-size-container');
+        const brushSliderContainer = document.getElementById('brush-slider-container');
+
+        brushSizeContainer.addEventListener('click', () => {
+            brushSliderContainer.style.display = brushSliderContainer.style.display === 'block' ? 'none' : 'block';
+        });
+
+        const brushSizeSlider = document.getElementById('brushSizeSlider');
+        const brushSizePreview = document.getElementById('brush-size-preview');
+
+        brushSizeSlider.addEventListener('input', () => {
+            brushSize = brushSizeSlider.value;
+            brushSizePreview.textContent = `${brushSize}px`;
+        });
+
+        function updateColorPickerBackground() {
+            const colorPickerButton = document.getElementById('color-picker-button');
+            colorPickerButton.style.backgroundColor = brushColor;
+        }
+
+        document.getElementById('color-picker-button').addEventListener('click', () => {
+            let colorPicker = document.createElement('input');
+            colorPicker.setAttribute('type', 'color');
+            colorPicker.style.position = 'absolute';
+            colorPicker.style.zIndex = '1000';
+            colorPicker.addEventListener('input', (e) => {
+                brushColor = e.target.value;
+                updateColorPickerBackground();
+                document.body.removeChild(colorPicker);
+            });
+            document.body.appendChild(colorPicker);
+            colorPicker.click();
+        });
+
+        brushSizeContainer.addEventListener('mouseover', () => {
+            brushSizeContainer.style.backgroundColor = brushColor;
+        });
+
+        brushSizeContainer.addEventListener('mouseout', () => {
+            brushSizeContainer.style.backgroundColor = '#f3f3f3';
+        });
+
+        // Top Bar Functionality
+        document.getElementById('exportButton').addEventListener('click', () => {
+            const dataURL = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'mirrored_drawing.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        document.getElementById('helpButton').addEventListener('click', () => {
+            alert('Mirrored Drawing App Help:\n\n' +
+                  '• Draw on the left side of the canvas, and your drawing will be mirrored on the right.\n' +
+                  '• Use the bottom toolbar to change brush color, adjust brush size, toggle the eraser, undo actions, or clear the canvas.\n' +
+                  '• Use the top bar to export your drawing, get help, or change the canvas background color.');
+        });
+
+        document.getElementById('bgColorButton').addEventListener('click', () => {
+            let bgColorPicker = document.createElement('input');
+            bgColorPicker.setAttribute('type', 'color');
+            bgColorPicker.style.position = 'absolute';
+            bgColorPicker.style.zIndex = '1000';
+            bgColorPicker.addEventListener('input', (e) => {
+                currentBackgroundColor = e.target.value;
+                restoreCanvasState(); // Redraw canvas with new background
+                document.body.removeChild(bgColorPicker);
+            });
+            document.body.appendChild(bgColorPicker);
+            bgColorPicker.click();
+        });
+
+        // Initial drawing of instruction text and dividing line
+        restoreCanvasState();
+    </script>
+</body>
+</html>
